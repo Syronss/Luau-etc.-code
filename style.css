@@ -1,0 +1,62 @@
+:root {
+	/* replace 'img_url' with your animated image or regular image link */
+	/* e.x. https://media.tenor.com/xCc58fEqFREAAAAC/nerd-nerdy.gif */
+	--url: img_url;
+}
+
+@media (prefers-color-scheme: dark) {
+	html {
+		color-scheme: dark dark;
+	}
+}
+
+@font-face {
+	font-family: "JetBrains Mono";
+	src:
+		url("/assets/fonts/JetBrainsMono-Regular.ttf") format("truetype"),
+		url("/assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+
+html,
+body {
+	background-color: #222222;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	font-family: "JetBrains Mono", "JetBrains Mono", Consolas, "Courier New",
+		monospace;
+	color: white;
+}
+
+.margin:first-child {
+	background-image: var(--url);
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+}
+
+.lines-content:nth-of-type(1),
+.monaco-editor-background:nth-of-type(1) {
+	background-image: var(--url);
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+}
+#monaco {
+	width: 100%;
+	/*
+		this just keeps the editor
+		from overflowing the theme selector
+	*/
+	height: 97%;
+}
+
+select {
+	display: inline-block;
+	padding: 4px 3px 3px 5px;
+	margin: 0;
+	outline: none; /* remove focus ring from Webkit */
+	line-height: 1.2;
+}

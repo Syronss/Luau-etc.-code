@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg" />
+		<link rel="stylesheet" href="style.css" />
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>MonaLuau</title>
+	</head>
+
+	<body>
+		<select name="Theme selector" title="Theme selector">
+			<optgroup label="Other Actions">
+				<option value="find-in-files">Find theme in files</option>
+			</optgroup>
+			<optgroup
+				label="Default themes:"
+				class="theme-option-group"
+				id="themes-default-group"
+			>
+				<option
+					value="krnlDark"
+					data-defined="true"
+					data-file-path=""
+					selected
+					disabled
+					id="default-theme-option"
+				>
+					Krnl (Dark, Default)
+				</option>
+				<option value="krnlLight" data-defined="true" data-file-path="">
+					Krnl (Light)
+				</option>
+				<option
+					value="net-theme-dark"
+					data-defined="true"
+					data-file-path=""
+				>
+					.NET (Dark)
+				</option>
+				<option
+					value="net-theme-light"
+					data-defined="true"
+					data-file-path=""
+				>
+					.NET (Light)
+				</option>
+			</optgroup>
+			<optgroup
+				label="Bundled themes:"
+				class="theme-option-group"
+				id="themes-bundled-group"
+			></optgroup>
+			<optgroup
+				label="Imported themes:"
+				id="themes-imported-group"
+				class="theme-option-group"
+			></optgroup>
+		</select>
+		<div id="monaco"></div>
+		<script type="module" src="/src/theme/themeSetup.ts"></script>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

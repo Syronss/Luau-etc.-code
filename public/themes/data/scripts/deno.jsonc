@@ -1,0 +1,7 @@
+{
+	"tasks": {
+		"download-themes": "deno run download-themes.ts",
+		"create-themes-json": "deno run create-themes-json.ts",
+		"convert": "deno run convert.ts"
+	}
+}

@@ -1,0 +1,69 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Monaco Theme Schema",
+	"description": "A JSON schema for defining Monaco themes.",
+	"type": "object",
+	"properties": {
+		"encodedTokensColors": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"base": {
+			"type": "string",
+			"description": "A theme to base your theme off of (e.g. vs, vs-dark, or hc-black).",
+			"title": "Base Theme",
+			"enum": ["vs", "vs-dark", "hc-black", "hc-light"]
+		},
+		"inherit": {
+			"type": "boolean",
+			"description": "Determines if it will completely replace the built-in rules.",
+			"title": "Inherit Built-in Rules",
+			"examples": [true, false],
+			"enum": [true, false]
+		},
+		"colors": {
+			"type": "object",
+			"description": "The colors that are used by the theme.",
+			"title": "Colors",
+			"additionalProperties": {
+				"title": "Color",
+				"description": "A color value for the specified key.",
+				"type": "string"
+			}
+		},
+		"rules": {
+			"type": "array",
+			"minItems": 1,
+			"description": "An array of rules that define how different types of tokens are displayed.",
+			"title": "Rules",
+			"items": {
+				"type": "object",
+				"required": ["token"],
+				"properties": {
+					"token": {
+						"type": "string",
+						"description": "The name of the token.",
+						"title": "Token Name"
+					},
+					"foreground": {
+						"type": "string",
+						"description": "The foreground color of the token.",
+						"title": "Foreground Color"
+					},
+					"fontStyle": {
+						"type": "string",
+						"description": "The font style of the token.",
+						"title": "Font Style"
+					},
+					"background": {
+						"type": "string",
+						"description": "The background color of the token.",
+						"title": "Background Color"
+					}
+				}
+			}
+		}
+	}
+}

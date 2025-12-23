@@ -1,0 +1,33 @@
+{
+	"short_name": "MonaLuau",
+	"name": "MonaLuau: A Luau IDE using Monaco",
+	"icons": [
+		{
+			"sizes": "32x32",
+			"src": "/assets/icons/icon.svg"
+		},
+		{
+			"sizes": "30x31",
+			"src": "/assets/icons/icon2.svg"
+		},
+		{
+			"sizes": "180x180",
+			"src": "/assets/icons/icon3.svg"
+		}
+	],
+	"id": "/?source=pwa",
+	"start_url": "/?source=pwa",
+	"background_color": "#3367D6",
+	"display": "standalone",
+	"scope": "/",
+	"theme_color": "#3367D6",
+	"shortcuts": [],
+	"description": "Luau IDE using Monaco",
+	"screenshots": [
+		{
+			"sizes": "1920x1048",
+			"form_factor": "wide",
+			"src": "/assets/screenshots/pwa-1.png"
+		}
+	]
+}
