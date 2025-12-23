@@ -12,7 +12,8 @@ export type CompletionItemExtended = monaco.languages.CompletionItem & {
 export function makeEmptyChildrenField(whitelist: CompletionItemKindName[] = []): ChildrenField {
 	const keys = Object.keys(monaco.languages.CompletionItemKind)
 		.filter(a => whitelist.includes(a as CompletionItemKindName));
-	return Object.fromEntries(keys.map((v, i) => [v, []]));
+	// Hata çözümü: (v, i) yerine sadece (v) kullanıldı çünkü 'i' kullanılmıyordu.
+	return Object.fromEntries(keys.map((v) => [v, []]));
 }
 
 export default function initMisc(editor: monaco.editor.IStandaloneCodeEditor) {
