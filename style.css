@@ -1,13 +1,12 @@
 :root {
-	/* replace 'img_url' with your animated image or regular image link */
-	/* e.x. https://media.tenor.com/xCc58fEqFREAAAAC/nerd-nerdy.gif */
-	--url: img_url;
-}
-
-@media (prefers-color-scheme: dark) {
-	html {
-		color-scheme: dark dark;
-	}
+	/* Global Variables */
+	--header-height: 48px;
+	--bg-color: #1e1e1e;
+	--header-bg: #2d2d2d;
+	--border-color: #3e3e3e;
+	--text-primary: #cccccc;
+	--accent-color: #7aa2f7;
+	--url: url(''); /* Arka plan resmi için placeholder */
 }
 
 @font-face {
@@ -17,46 +16,111 @@
 		url("/assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
 }
 
-html,
-body {
-	background-color: #222222;
+/* Temel Reset */
+html, body {
 	width: 100%;
 	height: 100%;
 	margin: 0;
 	padding: 0;
-	overflow: hidden;
-	font-family: "JetBrains Mono", "JetBrains Mono", Consolas, "Courier New",
-		monospace;
-	color: white;
+	overflow: hidden; /* Scrollbar oluşumunu engeller */
+	background-color: var(--bg-color);
+	font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+	color: var(--text-primary);
+	display: flex;
+	flex-direction: column; /* Dikey yerleşim */
 }
 
-.margin:first-child {
-	background-image: var(--url);
-	background-size: cover;
-	background-repeat: no-repeat;
-	background-attachment: fixed;
+/* Modern Header */
+.editor-header {
+	height: var(--header-height);
+	background-color: var(--header-bg);
+	border-bottom: 1px solid var(--border-color);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 16px;
+	box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+	z-index: 10;
 }
 
-.lines-content:nth-of-type(1),
-.monaco-editor-background:nth-of-type(1) {
-	background-image: var(--url);
-	background-size: cover;
-	background-repeat: no-repeat;
-	background-attachment: fixed;
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: bold;
+	font-size: 1.1rem;
+	color: #fff;
 }
-#monaco {
-	width: 100%;
-	/*
-		this just keeps the editor
-		from overflowing the theme selector
-	*/
-	height: 97%;
+
+.brand .logo {
+	height: 24px;
+	width: 24px;
+}
+
+.toolbar {
+	display: flex;
+	align-items: center;
+}
+
+/* Select Box Styling */
+.select-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9rem;
+}
+
+.select-container label {
+	color: #888;
 }
 
 select {
-	display: inline-block;
-	padding: 4px 3px 3px 5px;
-	margin: 0;
-	outline: none; /* remove focus ring from Webkit */
-	line-height: 1.2;
+	background-color: #3c3c3c;
+	color: #fff;
+	border: 1px solid var(--border-color);
+	padding: 4px 8px;
+	border-radius: 4px;
+	outline: none;
+	font-family: inherit;
+	cursor: pointer;
+	transition: border-color 0.2s;
+}
+
+select:hover {
+	border-color: var(--accent-color);
+}
+
+/* Editör Container - Flex ile kalan alanı doldurur */
+#editor-container {
+	flex-grow: 1; /* Header'dan kalan tüm boşluğu kapla */
+	position: relative;
+	width: 100%;
+	height: calc(100vh - var(--header-height));
+}
+
+#monaco {
+	width: 100%;
+	height: 100%;
+}
+
+/* Monaco Editor Background Fix */
+/* Eğer transparan tema kullanılıyorsa arka plan resmini göstermek için */
+.monaco-editor-background {
+	background-color: transparent !important; 
+}
+
+/* Custom Scrollbar for Webkit */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-track {
+	background: #252526;
+}
+::-webkit-scrollbar-thumb {
+	background: #424242;
+	border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #4f4f4f;
 }
