@@ -267,37 +267,36 @@ monaco.editor.defineTheme("krnlDark", {
 		"textCodeBlock.background": "#181818"
 	}
 });
-//#endregion
-//#endregion
 
 const editor = monaco.editor.create(document.querySelector("#monaco")!, {
-	value: "-- @supported-envs Krnl syn syn-v3 script-ware\n-- @luau-features str-templates\n\n",
+	value: "-- @supported-envs Krnl syn syn-v3 script-ware\n-- @luau-features str-templates\n\nprint('Hello MonaLuau!')",
 	language: "luau",
 	theme: "krnlDark",
 	fontSize: 14,
 	fontFamily: "'JetBrains Mono', Consolas, 'Courier New', monospace",
 	folding: true,
-	// autoIndent: true,
 	dragAndDrop: true,
 	minimap: {
+		enabled: true, // Minimap'i isteğe bağlı açıp kapatabilirsin
 		renderCharacters: false,
-		scale: 100
+		scale: 75 // Biraz daha küçük minimap
 	},
 	showFoldingControls: "always",
 	smoothScrolling: true,
-	stopRenderingLineAfter: 6500,
 	cursorBlinking: "smooth",
 	cursorSmoothCaretAnimation: "on",
 	foldingHighlight: false,
 	fontLigatures: true,
 	formatOnPaste: true,
 	showDeprecated: true,
-	suggest: {
-		snippetsPreventQuickSuggestions: true
-	},
+	automaticLayout: true, // BU ÇOK ÖNEMLİ: Pencere boyutu değişince editörü düzeltir.
 	padding: {
-		top: 24
+		top: 16,
+		bottom: 16
 	}
 });
+
+// Arkaplan resmini CSS variable'dan okumak veya set etmek için (Opsiyonel)
+// style.css içinde tanımladığın --url değişkeni çalışmaya devam edecektir.
 
 initMisc(editor);
