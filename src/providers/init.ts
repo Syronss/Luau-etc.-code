@@ -1,18 +1,17 @@
-// import { formatter, rangeFormatter } from "./format/handleFormat";
+// src/providers/init.ts
 import { autoCompleteProvider } from "./autocomplete/autocompleteProvider";
+// DİKKAT: hoverProvider.ts dosyasını düzelttikten sonra bu importlar çalışacaktır.
 import { hoverProvider, signatureHelpProvider } from "./hover/hoverProvider";
-import { registerSnippets } from "./autocomplete/snippets"; // <--- 1. Yeni importu ekle
+// HATA DÜZELTİLDİ: Dosya adı "snippet" (tekil) olduğu için yol düzeltildi.
+import { registerSnippets } from "./autocomplete/snippet"; 
 import * as monaco from "monaco-editor";
 
-export function initFormatter() {
-    // ... (eski kodlar)
-}
+// export function initFormatter() { ... } // Kullanmıyorsanız yorum satırı kalabilir
 
 export function initAutocomplete() {
     monaco.languages.registerCompletionItemProvider("luau", autoCompleteProvider);
 }
 
-// 2. Snippet başlatıcı fonksiyonu (Opsiyonel ama düzenli durur)
 export function initSnippets() {
     registerSnippets();
 }
@@ -27,7 +26,7 @@ export function initSignatureHelp() {
 
 export default function initProviders() {
     initAutocomplete();
-    initSnippets(); // <--- 3. Burada çağır
+    initSnippets();
     initHover();
     initSignatureHelp();
     // initFormatter();
