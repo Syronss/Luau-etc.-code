@@ -173,16 +173,10 @@ export const hoverProvider: monaco.languages.HoverProvider = {
 
         // 5. MEMBER KONTROLÜ (Properties, Functions, Events)
         // Bu kelime herhangi bir class'ın üyesi mi?
-        // Basit yaklaşım: Tüm class'ları tara ve bu isme sahip bir üye bul.
-        // (Daha gelişmiş versiyonda type inference gerekir ama şimdilik bu yeterli)
         
         let foundMember: any = null;
         let foundClassName: string = "";
 
-        // Bağlamı tahmin etmeye çalış (workspace.Part.Transparency -> Transparency, Part class'ındadır)
-        // Ancak type checker olmadan tam sınıfı bilmek zordur.
-        // Bu yüzden "en popüler" sınıfı veya ilk bulduğumuzu göstereceğiz.
-        
         for (const className in processedDump.Classes) {
             const cls = (processedDump.Classes as any)[className];
             const member = cls.Members.find((m: any) => m.Name === word);
@@ -202,7 +196,8 @@ export const hoverProvider: monaco.languages.HoverProvider = {
                               foundMember.MemberType === "Function" ? "🟦" : 
                               foundMember.MemberType === "Event" ? "⚡" : "🔹";
             
-            contents.push({ value: `**${foundMember.Name}**` });
+            // HATA DÜZELTİLDİ: typeEmoji değişkeni artık kullanılıyor
+            contents.push({ value: `**${typeEmoji} ${foundMember.Name}**` });
             
             let signature = "";
             if (foundMember.MemberType === "Property") {
