@@ -1,82 +1,95 @@
 import * as monaco from "monaco-editor";
 
 export async function initThemes() {
-    // ID ile doğru elementi seçelim
-	const select = document.querySelector("#theme-selector") as HTMLSelectElement;
+    // 1. Seçiciyi (Dropdown) doğru şekilde bul
+    const select = document.querySelector("#theme-selector") as HTMLSelectElement;
     if (!select) {
         console.error("Theme selector not found!");
         return;
     }
 
-	const bundledGroup = select.querySelector(
-		"optgroup#themes-bundled-group"
-	)!;
+    const bundledGroup = select.querySelector("optgroup#themes-bundled-group");
+    if (!bundledGroup) {
+        console.error("Bundled themes group not found!");
+        return;
+    }
 
-	/**
-	 * @param {string[]} themes A list of theme file names.
-	 * @returns {Promise<void>}
-	 */
-	const registerThemes = async (themes: string[]): Promise<void> => {
-		for (const themeFileName of themes) {
-			const name = themeFileName.replace(".json", "");
-			const modifiedName = name
-				.toLowerCase()
-				.replace(/[^a-z0-9-]+/g, "-");
-			
+    // 2. Temaları listeye ekleyen fonksiyon
+    const registerThemes = async (themes: string[]): Promise<void> => {
+        for (const themeFileName of themes) {
+            // Dosya isminden .json uzantısını kaldırıp görünen ismi oluştur
+            const name = themeFileName.replace(".json", "");
+            // Monaco için güvenli bir ID oluştur (boşlukları tire yap, küçült)
+            const modifiedName = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+
             const option = document.createElement("option");
-			option.textContent = name;
-			option.value = modifiedName;
+            option.textContent = name;
+            option.value = modifiedName;
             
-            // DÜZELTME: Dosya yolunu 'themes/data' olarak güncelledik (büyük/küçük harfe dikkat)
-			option.dataset.filePath = `/themes/data/${themeFileName}`;
-			option.dataset.defined = JSON.stringify(false);
-			bundledGroup.appendChild(option);
-		}
-	};
+            // ÖNEMLİ: Dosya yolu küçük harfle 'themes' olmalı
+            option.dataset.filePath = `/themes/data/${themeFileName}`;
+            option.dataset.defined = "false"; // Henüz yüklenmedi
+            
+            bundledGroup.appendChild(option);
+        }
+    };
 
-    // Listeyi yükle
-	const res = await fetch("/themes/data/themes.json");
-	if (res.ok) await registerThemes(await res.json());
+    // 3. themes.json dosyasını çek ve listeyi doldur
+    try {
+        const res = await fetch("/themes/data/themes.json");
+        if (res.ok) {
+            const themeList = await res.json();
+            await registerThemes(themeList);
+        } else {
+            console.error("themes.json bulunamadı! Lütfen dosya yolunu kontrol edin: /public/themes/data/themes.json");
+        }
+    } catch (error) {
+        console.error("Tema listesi yüklenirken hata oluştu:", error);
+    }
 
-    // YENİ EKLENTİ: Tema değiştirme olayını dinle
+    // 4. SEÇİM OLAYI (Bu kısım eksikti, o yüzden çalışmıyordu)
     select.addEventListener("change", async () => {
         const value = select.value;
         const selectedOption = select.options[select.selectedIndex];
 
-        // Özel aksiyonlar (find-in-files vb.) için kontrol
+        // "Dosyada ara" gibi özel seçenekleri yoksay
         if (value === "find-in-files") return;
 
-        // Varsayılan temalar (dosya yolu olmayanlar) için direkt geçiş yap
+        // Dosya yolu olmayan (varsayılan) temalar için direkt geçiş yap
         if (!selectedOption.dataset.filePath) {
             monaco.editor.setTheme(value);
             return;
         }
 
-        // Tema daha önce tanımlanmamışsa yükle
+        // Tema daha önce yüklenmemişse, fetch ile indirip tanımla
         const isDefined = JSON.parse(selectedOption.dataset.defined || "false");
         
         if (!isDefined) {
             try {
                 const filePath = selectedOption.dataset.filePath!;
+                // Temayı indir
                 const themeRes = await fetch(filePath);
                 
                 if (!themeRes.ok) {
-                    console.error(`Theme file not found: ${filePath}`);
+                    console.error(`Tema dosyası bulunamadı: ${filePath}`);
+                    alert(`Tema dosyası yüklenemedi: ${filePath}`);
                     return;
                 }
 
                 const themeData = await themeRes.json();
                 
-                // Temayı Monaco'ya tanımla
+                // Monaco Editor'e temayı tanıt
                 monaco.editor.defineTheme(value, themeData);
                 
-                // Tanımlandı olarak işaretle
+                // Artık yüklendi olarak işaretle, bir dahakine tekrar indirmesin
                 selectedOption.dataset.defined = "true";
                 
                 // Temayı uygula
                 monaco.editor.setTheme(value);
+                
             } catch (e) {
-                console.error("Error loading theme:", e);
+                console.error("Tema yüklenirken hata:", e);
+                alert("Tema yüklenirken bir hata oluştu. Konsolu (F12) kontrol edin.");
             }
         } else {
             // Zaten yüklüyse direkt uygula
