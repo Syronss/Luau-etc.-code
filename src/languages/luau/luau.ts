@@ -119,6 +119,30 @@ export const language: monaco.languages.IMonarchLanguage = {
 		//#endregion
 		//#region string
 		"string"
+
+		//#region Exploit Globals
+    "getgenv",
+    "getrenv",
+    "getreg",
+    "getgc",
+    "getinstances",
+    "getnilinstances",
+    "getloadedmodules",
+    "getconnections",
+    "firesignal",
+    "fireclickdetector",
+    "fireproximityprompt",
+    "hookfunction",
+    "hookmetamethod",
+    "newcclosure",
+    "checkcaller",
+    "islclosure",
+    "iscclosure",
+    "dumpstring",
+    "decompile",
+    "setreadonly",
+    "make_writeable",
+    "make_readonly",
 		//#endregion
 	],
 	operators: [
