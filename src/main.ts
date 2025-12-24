@@ -177,7 +177,7 @@ monaco.editor.defineTheme("krnlDark", {
 });
 
 const editor = monaco.editor.create(document.querySelector("#monaco")!, {
-	value: "-- @supported-envs Krnl syn syn-v3 script-ware\n-- @luau-features str-templates\n\nprint('Hello MonaLuau!')",
+	value: "-- @Syronss's Roblox Luau Editor\n-- @Site Hala Geliştirme Aşamasındadır, Daha Fazla Özellik İleriki Zamanlarda Eklenecektir \n\nprint('Hello User!')",
 	language: "luau",
 	theme: "krnlDark",
 	fontSize: 14,
