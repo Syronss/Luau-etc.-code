@@ -1,75 +1,249 @@
 import * as monaco from "monaco-editor";
 import { getModuleCompletions } from "./metadata";
-import { processedDump } from "./dump"; // API Dump verisini buradan çekiyoruz
+import { processedDump } from "./dump";
 
-// Exploit fonksiyonları (İsteğe bağlı kalabilir, Studio modu için engel değil)
 export const customExploitFunctions: string[] = [
     "getgenv", "getrenv", "getreg", "getgc", "getinstances", "getnilinstances",
     "fireclickdetector", "fireproximityprompt", "hookfunction", "newcclosure",
-    "loadstring", "checkcaller", "islclosure", "dumpstring", "task" // task kütüphanesi eklendi
+    "loadstring", "checkcaller", "islclosure", "dumpstring", "task"
 ];
 
-// 1. Global Roblox Tipleri (CFrame, Vector3 vb.) ve Enumlar
-function getGlobalRobloxCompletions(range: monaco.Range): monaco.languages.CompletionItem[] {
+// Hierarchy parser - Zincirleme completion için
+function parseHierarchy(model: monaco.editor.ITextModel, position: monaco.Position): string[] {
+    const lineContent = model.getLineContent(position.lineNumber);
+    const textBefore = lineContent.substring(0, position.column - 1);
+    
+    // Geriye doğru parse et: workspace.Part.Position -> ["workspace", "Part", "Position"]
+    const hierarchyMatch = textBefore.match(/([a-zA-Z_][a-zA-Z0-9_]*(?:[\.:])[a-zA-Z_][a-zA-Z0-9_]*)+$/);
+    if (!hierarchyMatch) return [];
+    
+    return hierarchyMatch[0].split(/[\.:]/).filter(Boolean);
+}
+
+// Bir class'ın member'larını getir
+function getClassMembers(className: string, range: monaco.Range): monaco.languages.CompletionItem[] {
+    const classData = processedDump.Classes[className];
+    if (!classData) return [];
+
     const suggestions: monaco.languages.CompletionItem[] = [];
 
-    // Global Roblox Sınıfları (Örn: Instance, Vector3, CFrame)
-    // Bu liste API Dump'tan da çekilebilir ama temel tipler genelde sabittir.
-    const globalTypes = ["Vector3", "Vector2", "CFrame", "Color3", "UDim", "UDim2", "Instance", "Enum", "Ray", "Random", "Region3"];
-    
-    globalTypes.forEach(type => {
+    for (const member of classData.Members) {
+        // Security check
+        if (member.Security && typeof member.Security === 'object' && member.Security.Read === 'None') continue;
+
+        let kind: monaco.languages.CompletionItemKind;
+        let insertText = member.Name;
+        let detail = '';
+
+        switch (member.MemberType) {
+            case 'Property':
+                kind = monaco.languages.CompletionItemKind.Property;
+                detail = `Property: ${member.ValueType?.Name || 'unknown'}`;
+                break;
+            case 'Function':
+            case 'Method':
+                kind = monaco.languages.CompletionItemKind.Method;
+                const params = member.Parameters?.map(p => `${p.Name}: ${p.Type.Name}`).join(', ') || '';
+                insertText = `${member.Name}($1)`;
+                detail = `(${params})`;
+                break;
+            case 'Event':
+                kind = monaco.languages.CompletionItemKind.Event;
+                detail = 'Event';
+                break;
+            case 'Callback':
+                kind = monaco.languages.CompletionItemKind.Function;
+                detail = 'Callback';
+                break;
+            default:
+                kind = monaco.languages.CompletionItemKind.Field;
+        }
+
         suggestions.push({
-            label: type,
-            kind: monaco.languages.CompletionItemKind.Class,
-            insertText: type,
-            documentation: `Roblox built-in type: ${type}`,
+            label: member.Name,
+            kind: kind,
+            insertText: insertText,
+            insertTextRules: insertText.includes('$') 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+            detail: detail,
+            documentation: member.Tags?.includes('Deprecated') ? '⚠️ Deprecated' : undefined,
             range: range
         });
-    });
+    }
 
-    // Enumların tamamlanması (Örn: Enum.KeyCode.E)
-    // Sadece "Enum" yazıldığında çıkması için basit bir ekleme, 
-    // detaylı Enum property'leri için "." tetikleyicisi kontrol edilmeli.
-    suggestions.push({
-        label: "Enum",
-        kind: monaco.languages.CompletionItemKind.Module,
-        insertText: "Enum",
-        documentation: "Roblox Enums",
-        range: range
+    return suggestions;
+}
+
+// Hierarchy-based completion
+function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): monaco.languages.CompletionItem[] {
+    if (hierarchy.length === 0) return [];
+
+    // İlk element'i bul (game, workspace, script vb.)
+    let currentClass: string | undefined;
+    
+    if (hierarchy[0] === 'game') {
+        currentClass = 'DataModel';
+    } else if (hierarchy[0] === 'workspace') {
+        currentClass = 'Workspace';
+    } else if (hierarchy[0] === 'script') {
+        currentClass = 'Script';
+    } else {
+        // Local variable veya bilinmeyen - type inference gerekir (gelecekte)
+        return [];
+    }
+
+    // Hierarchy'yi takip et
+    for (let i = 1; i < hierarchy.length - 1; i++) {
+        const memberName = hierarchy[i];
+        const classData = processedDump.Classes[currentClass];
+        if (!classData) return [];
+
+        // Bu member'ın tipini bul
+        const member = classData.Members.find(m => m.Name === memberName);
+        if (!member) return [];
+
+        if (member.MemberType === 'Property' && member.ValueType?.Name) {
+            currentClass = member.ValueType.Name;
+        } else if (member.ReturnType?.Name) {
+            currentClass = member.ReturnType.Name;
+        } else {
+            return [];
+        }
+    }
+
+    // Son class'ın member'larını döndür
+    return getClassMembers(currentClass, range);
+}
+
+// Enum completion
+function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
+    const lineContent = model.getLineContent(position.lineNumber);
+    const textBefore = lineContent.substring(0, position.column - 1);
+
+    // Enum.KeyCode. gibi bir pattern ara
+    const enumMatch = textBefore.match(/Enum\.([a-zA-Z_][a-zA-Z0-9_]*)\.$/);
+    if (!enumMatch) return [];
+
+    const enumName = enumMatch[1];
+    const enumData = processedDump.Enums[enumName];
+    if (!enumData) return [];
+
+    return enumData.Items.map(item => ({
+        label: item.Name,
+        kind: monaco.languages.CompletionItemKind.EnumMember,
+        insertText: item.Name,
+        detail: `Enum.${enumName}.${item.Name} = ${item.Value}`,
+        documentation: item.Tags?.includes('Deprecated') ? '⚠️ Deprecated' : undefined,
+        range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+    }));
+}
+
+// Geliştirilmiş local variable detection
+function getLocalCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
+    const text = model.getValue();
+    const suggestions: monaco.languages.CompletionItem[] = [];
+    const distinctVars = new Set<string>();
+
+    // Local değişkenler
+    const varPattern = /\b(?:local)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    let match;
+    while ((match = varPattern.exec(text)) !== null) {
+        distinctVars.add(match[1]);
+    }
+
+    // Function isimleri
+    const funcPattern = /\b(?:function)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    while ((match = funcPattern.exec(text)) !== null) {
+        distinctVars.add(match[1]);
+    }
+
+    // Function parametreleri - GELİŞTİRİLDİ
+    const paramPattern = /function[^(]*\(([^)]+)\)/g;
+    while ((match = paramPattern.exec(text)) !== null) {
+        const params = match[1].split(',');
+        params.forEach(param => {
+            const paramName = param.trim().split(/[\s:]/)[0];
+            if (paramName && /^[a-zA-Z_]/.test(paramName)) {
+                distinctVars.add(paramName);
+            }
+        });
+    }
+
+    distinctVars.forEach(varName => {
+        suggestions.push({
+            label: varName,
+            kind: monaco.languages.CompletionItemKind.Variable,
+            insertText: varName,
+            documentation: "Local variable or function",
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+        });
     });
 
     return suggestions;
 }
 
-// 2. Instance.new("...") için String İçi Tamamlama
+// Global Roblox tipleri
+function getGlobalRobloxCompletions(range: monaco.Range): monaco.languages.CompletionItem[] {
+    const suggestions: monaco.languages.CompletionItem[] = [];
+
+    const globalTypes = [
+        "Vector3", "Vector2", "CFrame", "Color3", "UDim", "UDim2", 
+        "Instance", "Enum", "Ray", "Random", "Region3", "TweenInfo",
+        "NumberRange", "NumberSequence", "ColorSequence", "BrickColor"
+    ];
+    
+    globalTypes.forEach(type => {
+        const classData = processedDump.Classes[type];
+        suggestions.push({
+            label: type,
+            kind: monaco.languages.CompletionItemKind.Class,
+            insertText: type,
+            documentation: classData ? `Roblox built-in type: ${type}` : undefined,
+            range: range
+        });
+    });
+
+    // Global instances
+    ['game', 'workspace', 'script', 'plugin', 'shared'].forEach(global => {
+        suggestions.push({
+            label: global,
+            kind: monaco.languages.CompletionItemKind.Variable,
+            insertText: global,
+            detail: 'Global',
+            range: range
+        });
+    });
+
+    return suggestions;
+}
+
+// Instance.new completion
 function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
     const lineContent = model.getLineContent(position.lineNumber);
     const textBefore = lineContent.substring(0, position.column - 1);
 
-    // Regex: Instance.new( Tırnak açılmış mı?
-    // Örnek yakalama: Instance.new(" veya Instance.new('
     if (textBefore.match(/Instance\.new\s*\(\s*["']$/)) {
-        // Tüm Class isimlerini öner (API Dump'tan)
-        return Object.keys(processedDump.Classes).map(className => ({
-            label: className,
-            kind: monaco.languages.CompletionItemKind.Class,
-            insertText: className,
-            detail: "Roblox Class",
-            documentation: `Creates a new ${className}`,
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
-        }));
+        return Object.values(processedDump.Classes)
+            .filter(cls => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'))
+            .map(cls => ({
+                label: cls.Name,
+                kind: monaco.languages.CompletionItemKind.Class,
+                insertText: cls.Name,
+                detail: "Roblox Class",
+                documentation: `Creates a new ${cls.Name}`,
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+            }));
     }
     return [];
 }
 
-// 3. game:GetService("...") için Servis Tamamlama
+// GetService completion
 function getGetServiceCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
     const lineContent = model.getLineContent(position.lineNumber);
     const textBefore = lineContent.substring(0, position.column - 1);
 
-    // Regex: :GetService( Tırnak açılmış mı?
     if (textBefore.match(/:GetService\s*\(\s*["']$/)) {
-        // Sadece Servis olan classları öner
         return processedDump.ServiceList.map(service => ({
             label: service.Name,
             kind: monaco.languages.CompletionItemKind.Class,
@@ -82,98 +256,95 @@ function getGetServiceCompletions(model: monaco.editor.ITextModel, position: mon
     return [];
 }
 
-function getLocalCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
-    const text = model.getValue();
-    const suggestions: monaco.languages.CompletionItem[] = [];
-    // Regex'i biraz geliştirdim, parametreleri de yakalaması için
-    const varPattern = /\b(?:local|function)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
-    
-    let match;
-    const distinctVars = new Set<string>();
-
-    while ((match = varPattern.exec(text)) !== null) {
-        const varName = match[1];
-        if (!distinctVars.has(varName)) {
-            distinctVars.add(varName);
-            suggestions.push({
-                label: varName,
-                kind: monaco.languages.CompletionItemKind.Variable,
-                insertText: varName,
-                documentation: "Local variable or function",
-                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
-            });
-        }
-    }
-    return suggestions;
-}
-
+// Ana provider
 export const autoCompleteProvider: monaco.languages.CompletionItemProvider = {
-    triggerCharacters: [".", ":", '"', "'", "("], // Tetikleyicilere parantez de eklendi
+    triggerCharacters: [".", ":", '"', "'", "("],
+    
     provideCompletionItems(model, pos, _ctx, _tok) {
         const word = model.getWordUntilPosition(pos);
         const range = new monaco.Range(pos.lineNumber, word.startColumn, pos.lineNumber, word.endColumn);
 
-        // String içi kontrolü (Mevcut koddan biraz daha gelişmiş)
         const lineContent = model.getLineContent(pos.lineNumber);
         const textBefore = lineContent.substring(0, pos.column - 1);
-        const doubleQuotes = (textBefore.match(/"/g) || []).length;
-        const singleQuotes = (textBefore.match(/'/g) || []).length;
-        const isInsideString = (doubleQuotes % 2 !== 0) || (singleQuotes % 2 !== 0);
+        const isInsideString = ((textBefore.match(/"/g) || []).length % 2 !== 0) || 
+                              ((textBefore.match(/'/g) || []).length % 2 !== 0);
 
-        // Eğer string içindeysek SADECE özel durumlar (Instance.new, GetService) için öneri yap
+        // String içi
         if (isInsideString) {
-            const serviceSuggestions = getGetServiceCompletions(model, pos);
-            const instanceSuggestions = getInstanceNewCompletions(model, pos);
-            
             return {
-                suggestions: [...serviceSuggestions, ...instanceSuggestions]
+                suggestions: [
+                    ...getGetServiceCompletions(model, pos),
+                    ...getInstanceNewCompletions(model, pos)
+                ]
             };
         }
 
         const suggestions: monaco.languages.CompletionItem[] = [];
 
-        // 1. Roblox API Dump (Metadata XML - Math, Table vb.)
+        // 1. Enum completion (Enum.KeyCode.)
+        const enumSuggestions = getEnumCompletions(model, pos);
+        if (enumSuggestions.length > 0) {
+            return { suggestions: enumSuggestions };
+        }
+
+        // 2. Hierarchy-based completion (workspace.Part.)
+        const hierarchy = parseHierarchy(model, pos);
+        if (hierarchy.length > 0) {
+            const hierarchySuggestions = getHierarchyCompletions(hierarchy, range);
+            if (hierarchySuggestions.length > 0) {
+                return { suggestions: hierarchySuggestions };
+            }
+        }
+
+        // 3. Metadata (math, string, table vb.)
         const apiSuggestions = getModuleCompletions(range);
         if (apiSuggestions) {
             suggestions.push(...apiSuggestions);
         }
 
-        // 2. Global Roblox Tipleri (Vector3, CFrame, Instance vb.)
+        // 4. Global Roblox tipleri
         suggestions.push(...getGlobalRobloxCompletions(range));
 
-        // 3. Lokal Değişkenler
+        // 5. Local değişkenler
         suggestions.push(...getLocalCompletions(model, pos));
 
-        // 4. Exploit Fonksiyonları (İstersen bir ayarla kapatılabilir yapabilirsin)
+        // 6. Exploit functions
         suggestions.push(...customExploitFunctions.map(func => ({
             label: func,
             kind: monaco.languages.CompletionItemKind.Function,
             insertText: func,
-            detail: "Global",
+            detail: "Exploit Global",
             range: range
         })));
 
-        // 5. Snippet Önerileri (Bonus: Studio/Exploit ortak kullanımı)
-        suggestions.push({
-            label: "task.wait",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "task.wait(${1:0})",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            detail: "Snippet",
-            range: range
-        });
-        
-         suggestions.push({
-            label: "game:GetService",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: 'game:GetService("${1:ServiceName}")',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            detail: "Snippet",
-            range: range
-        });
+        // 7. Snippet'ler
+        suggestions.push(
+            {
+                label: "task.wait",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: "task.wait(${1:0})",
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                detail: "Snippet",
+                range: range
+            },
+            {
+                label: "game:GetService",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: 'game:GetService("${1:ServiceName}")',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                detail: "Snippet",
+                range: range
+            }
+        );
 
-        return {
-            suggestions: suggestions
-        };
+        // Dedupe - aynı label'a sahip item'ları birleştir
+        const uniqueSuggestions = suggestions.reduce((acc, item) => {
+            if (!acc.find(x => x.label === item.label)) {
+                acc.push(item);
+            }
+            return acc;
+        }, [] as monaco.languages.CompletionItem[]);
+
+        return { suggestions: uniqueSuggestions };
     }
 };
