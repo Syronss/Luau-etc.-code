@@ -204,30 +204,6 @@ function getExploitFunctionCategory(funcName: string): string | undefined {
     return undefined;
 }
 
-// Yardımcı Fonksiyon: Hiyerarşik yol analizi
-function parseContextFromLine(lineContent: string, column: number): {
-    hierarchy: string[];
-    context: 'property' | 'method' | 'enum' | 'global';
-} {
-    const textBefore = lineContent.substring(0, column - 1);
-    
-    // Enum kontrolü
-    if (textBefore.includes('Enum.')) {
-        return { hierarchy: textBefore.split(/[\.:]/), context: 'enum' };
-    }
-    
-    // Nokta veya iki nokta üst üste ile bölünmüş hiyerarşi
-    const dotMatch = textBefore.match(/([a-zA-Z_][a-zA-Z0-9_]*(?:[\.:][a-zA-Z_][a-zA-Z0-9_]*)*)$/);
-    if (dotMatch) {
-        const hierarchy = dotMatch[0].split(/[\.:]/).filter(Boolean);
-        const lastChar = dotMatch[0].slice(-1);
-        const context = lastChar === ':' ? 'method' : 'property';
-        return { hierarchy, context };
-    }
-    
-    return { hierarchy: [], context: 'global' };
-}
-
 export const hoverProvider: monaco.languages.HoverProvider = {
     provideHover: (model, position) => {
         const wordInfo = model.getWordAtPosition(position);
@@ -450,13 +426,11 @@ export const signatureHelpProvider: monaco.languages.SignatureHelpProvider = {
         
         // Fonksiyon adını bul
         let functionName = "";
-        let isMethod = false;
         
         // Method call: obj:method(
         const methodMatch = textBefore.match(/([a-zA-Z0-9_]+):([a-zA-Z0-9_]+)\($/);
         if (methodMatch) {
             functionName = methodMatch[2];
-            isMethod = true;
         } 
         // Function call: function(
         else {
