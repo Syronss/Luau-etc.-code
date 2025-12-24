@@ -203,29 +203,7 @@ const editor = monaco.editor.create(document.querySelector("#monaco")!, {
 		bottom: 16
 	}
 });
-// Mevcut main.ts kodlarının en altına bu bloğu ekle:
 
-//#region Language Selector Logic
-const languageSelector = document.getElementById("language-selector") as HTMLSelectElement;
-
-if (languageSelector) {
-    languageSelector.addEventListener("change", (e) => {
-        const target = e.target as HTMLSelectElement;
-        const newLang = target.value;
-        
-        // Mevcut modelin dilini değiştir
-        const model = editor.getModel();
-        if (model) {
-            monaco.editor.setModelLanguage(model, newLang);
-        }
-    });
-}
-//#endregion
-
-// Pencere boyutu değiştiğinde editörün düzgün yeniden boyutlanması için:
-window.addEventListener("resize", () => {
-    editor.layout();
-});
 // Arkaplan resmini CSS variable'dan okumak veya set etmek için (Opsiyonel)
 // style.css içinde tanımladığın --url değişkeni çalışmaya devam edecektir.
 

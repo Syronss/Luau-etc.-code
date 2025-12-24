@@ -72,7 +72,7 @@ export const language: monaco.languages.IMonarchLanguage = {
 		{ token: "delimiter.array", open: "[", close: "]" },
 		{ token: "delimiter.parenthesis", open: "(", close: ")" }
 	],
-globals: [
+	globals: [
 		//#region basic
 		"print",
 		"error",
@@ -118,32 +118,7 @@ globals: [
 		"getupvalues",
 		//#endregion
 		//#region string
-		"string", // <-- BURAYA VİRGÜL EKLENDİ
-		//#endregion
-
-		//#region Exploit Globals
-		"getgenv",
-		"getrenv",
-		"getreg",
-		"getgc",
-		"getinstances",
-		"getnilinstances",
-		"getloadedmodules",
-		"getconnections",
-		"firesignal",
-		"fireclickdetector",
-		"fireproximityprompt",
-		"hookfunction",
-		"hookmetamethod",
-		"newcclosure",
-		"checkcaller",
-		"islclosure",
-		"iscclosure",
-		"dumpstring",
-		"decompile",
-		"setreadonly",
-		"make_writeable",
-		"make_readonly"
+		"string"
 		//#endregion
 	],
 	operators: [
