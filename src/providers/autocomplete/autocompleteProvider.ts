@@ -1,3 +1,4 @@
+// src/providers/autocomplete/autocompleteProvider.ts
 import * as monaco from "monaco-editor";
 import { getModuleCompletions } from "./metadata";
 import { processedDump } from "./dump";
@@ -22,12 +23,14 @@ function parseHierarchy(model: monaco.editor.ITextModel, position: monaco.Positi
 
 // Bir class'ın member'larını getir
 function getClassMembers(className: string, range: monaco.Range): monaco.languages.CompletionItem[] {
-    const classData = processedDump.Classes[className];
+    // Tip güvenliği için 'any' kullanımı (API dump yapısı tam bilinmediğinden)
+    const classData = (processedDump.Classes as any)[className];
     if (!classData) return [];
 
     const suggestions: monaco.languages.CompletionItem[] = [];
 
-    for (const member of classData.Members) {
+    // classData.Members üzerinde döngü
+    for (const member of (classData.Members as any[])) {
         // Security check
         if (member.Security && typeof member.Security === 'object' && member.Security.Read === 'None') continue;
 
@@ -43,7 +46,7 @@ function getClassMembers(className: string, range: monaco.Range): monaco.languag
             case 'Function':
             case 'Method':
                 kind = monaco.languages.CompletionItemKind.Method;
-                const params = member.Parameters?.map(p => `${p.Name}: ${p.Type.Name}`).join(', ') || '';
+                const params = member.Parameters?.map((p: any) => `${p.Name}: ${p.Type.Name}`).join(', ') || '';
                 insertText = `${member.Name}($1)`;
                 detail = `(${params})`;
                 break;
@@ -76,11 +79,10 @@ function getClassMembers(className: string, range: monaco.Range): monaco.languag
 }
 
 // Hierarchy-based completion
-// src/providers/autocomplete/autocompleteProvider.ts içindeki getHierarchyCompletions fonksiyonu
-
 function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): monaco.languages.CompletionItem[] {
     if (hierarchy.length === 0) return [];
 
+    // İlk element'i bul (game, workspace, script vb.)
     let currentClass: string | undefined;
     
     if (hierarchy[0] === 'game') {
@@ -90,22 +92,20 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
     } else if (hierarchy[0] === 'script') {
         currentClass = 'Script';
     } else {
+        // Local variable veya bilinmeyen - type inference gerekir (gelecekte)
         return [];
     }
 
     // Hierarchy'yi takip et
     for (let i = 1; i < hierarchy.length - 1; i++) {
-        // HATA DÜZELTİLDİ: currentClass undefined ise döngüden çık
+        // Hata önleyici kontrol
         if (!currentClass) return [];
 
         const memberName = hierarchy[i];
-        
-        // HATA DÜZELTİLDİ: processedDump tipleri any ise hata verebilir, ama asıl sorun currentClass index'inin undefined olabilmesiydi.
-        const classData = processedDump.Classes[currentClass];
+        const classData = (processedDump.Classes as any)[currentClass];
         if (!classData) return [];
 
-        // HATA DÜZELTİLDİ: 'm' parametresine açıkça 'any' diyerek TS hatasını (TS7006) susturuyoruz
-        // (Veya uygun bir Interface tanımladıysanız onu kullanın)
+        // Bu member'ın tipini bul
         const member = classData.Members.find((m: any) => m.Name === memberName);
         if (!member) return [];
 
@@ -118,13 +118,10 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
         }
     }
 
-    // HATA DÜZELTİLDİ: Son çağrıda currentClass undefined ise boş dizi dön
+    // Son class'ın member'larını döndür
+    // Eğer currentClass undefined ise hata vermemesi için kontrol
     if (!currentClass) return [];
 
-    return getClassMembers(currentClass, range);
-}
-
-    // Son class'ın member'larını döndür
     return getClassMembers(currentClass, range);
 }
 
@@ -138,10 +135,10 @@ function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Po
     if (!enumMatch) return [];
 
     const enumName = enumMatch[1];
-    const enumData = processedDump.Enums[enumName];
+    const enumData = (processedDump.Enums as any)[enumName];
     if (!enumData) return [];
 
-    return enumData.Items.map(item => ({
+    return enumData.Items.map((item: any) => ({
         label: item.Name,
         kind: monaco.languages.CompletionItemKind.EnumMember,
         insertText: item.Name,
@@ -206,7 +203,7 @@ function getGlobalRobloxCompletions(range: monaco.Range): monaco.languages.Compl
     ];
     
     globalTypes.forEach(type => {
-        const classData = processedDump.Classes[type];
+        const classData = (processedDump.Classes as any)[type];
         suggestions.push({
             label: type,
             kind: monaco.languages.CompletionItemKind.Class,
@@ -236,9 +233,9 @@ function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: mo
     const textBefore = lineContent.substring(0, position.column - 1);
 
     if (textBefore.match(/Instance\.new\s*\(\s*["']$/)) {
-        return Object.values(processedDump.Classes)
-            .filter(cls => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'))
-            .map(cls => ({
+        return Object.values(processedDump.Classes as any)
+            .filter((cls: any) => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'))
+            .map((cls: any) => ({
                 label: cls.Name,
                 kind: monaco.languages.CompletionItemKind.Class,
                 insertText: cls.Name,
@@ -256,7 +253,7 @@ function getGetServiceCompletions(model: monaco.editor.ITextModel, position: mon
     const textBefore = lineContent.substring(0, position.column - 1);
 
     if (textBefore.match(/:GetService\s*\(\s*["']$/)) {
-        return processedDump.ServiceList.map(service => ({
+        return processedDump.ServiceList.map((service: any) => ({
             label: service.Name,
             kind: monaco.languages.CompletionItemKind.Class,
             insertText: service.Name,
