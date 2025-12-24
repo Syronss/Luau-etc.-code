@@ -76,10 +76,11 @@ function getClassMembers(className: string, range: monaco.Range): monaco.languag
 }
 
 // Hierarchy-based completion
+// src/providers/autocomplete/autocompleteProvider.ts içindeki getHierarchyCompletions fonksiyonu
+
 function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): monaco.languages.CompletionItem[] {
     if (hierarchy.length === 0) return [];
 
-    // İlk element'i bul (game, workspace, script vb.)
     let currentClass: string | undefined;
     
     if (hierarchy[0] === 'game') {
@@ -89,18 +90,23 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
     } else if (hierarchy[0] === 'script') {
         currentClass = 'Script';
     } else {
-        // Local variable veya bilinmeyen - type inference gerekir (gelecekte)
         return [];
     }
 
     // Hierarchy'yi takip et
     for (let i = 1; i < hierarchy.length - 1; i++) {
+        // HATA DÜZELTİLDİ: currentClass undefined ise döngüden çık
+        if (!currentClass) return [];
+
         const memberName = hierarchy[i];
+        
+        // HATA DÜZELTİLDİ: processedDump tipleri any ise hata verebilir, ama asıl sorun currentClass index'inin undefined olabilmesiydi.
         const classData = processedDump.Classes[currentClass];
         if (!classData) return [];
 
-        // Bu member'ın tipini bul
-        const member = classData.Members.find(m => m.Name === memberName);
+        // HATA DÜZELTİLDİ: 'm' parametresine açıkça 'any' diyerek TS hatasını (TS7006) susturuyoruz
+        // (Veya uygun bir Interface tanımladıysanız onu kullanın)
+        const member = classData.Members.find((m: any) => m.Name === memberName);
         if (!member) return [];
 
         if (member.MemberType === 'Property' && member.ValueType?.Name) {
@@ -111,6 +117,12 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
             return [];
         }
     }
+
+    // HATA DÜZELTİLDİ: Son çağrıda currentClass undefined ise boş dizi dön
+    if (!currentClass) return [];
+
+    return getClassMembers(currentClass, range);
+}
 
     // Son class'ın member'larını döndür
     return getClassMembers(currentClass, range);
