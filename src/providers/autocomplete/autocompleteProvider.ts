@@ -234,7 +234,7 @@ function parseHierarchy(model: monaco.editor.ITextModel, position: monaco.Positi
 // Bir class'ın member'larını getir - geliştirilmiş versiyon
 function getClassMembers(className: string, range: monaco.Range, context: string = 'property'): monaco.languages.CompletionItem[] {
     const processedDumpTyped = processedDump as unknown as ProcessedDump;
-    const classData = processedDumpTyped.Classes[className];
+    const classData: ClassData | undefined = processedDumpTyped.Classes[className];
     if (!classData) return [];
 
     const suggestions: monaco.languages.CompletionItem[] = [];
@@ -304,7 +304,6 @@ function getClassMembers(className: string, range: monaco.Range, context: string
 
     return suggestions;
 }
-
 // Hierarchy-based completion - geliştirilmiş
 function getHierarchyCompletions(hierarchy: string[], chainType: string, range: monaco.Range): monaco.languages.CompletionItem[] {
     if (hierarchy.length === 0) return [];
@@ -336,11 +335,11 @@ function getHierarchyCompletions(hierarchy: string[], chainType: string, range: 
         if (!currentClass) return [];
 
         const memberName = hierarchy[i];
-        const classData = processedDumpTyped.Classes[currentClass];
+        const classData: ClassData | undefined = processedDumpTyped.Classes[currentClass];
         if (!classData) return [];
 
-        // Member'ı bul
-        const member = classData.Members.find((m: Member) => 
+        // Member'ı bul - HATA DÜZELTME: Tip ataması yap
+        const member: Member | undefined = classData.Members.find((m: Member) => 
             m.Name === memberName || 
             m.Name.toLowerCase() === memberName.toLowerCase()
         );
@@ -363,7 +362,6 @@ function getHierarchyCompletions(hierarchy: string[], chainType: string, range: 
 
     return getClassMembers(currentClass, range, chainType);
 }
-
 // Enum completion - geliştirilmiş
 function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
     const lineContent = model.getLineContent(position.lineNumber);
@@ -375,7 +373,8 @@ function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Po
 
     const enumName = enumMatch[1];
     const processedDumpTyped = processedDump as unknown as ProcessedDump;
-    const enumData = processedDumpTyped.Enums[enumName];
+    // HATA DÜZELTME: Tip ataması yap
+    const enumData: EnumData | undefined = processedDumpTyped.Enums[enumName];
     if (!enumData) return [];
 
     return enumData.Items.map((item: EnumItem) => ({
@@ -502,7 +501,8 @@ function getGlobalRobloxCompletions(range: monaco.Range): monaco.languages.Compl
 
     // Roblox built-in tipleri
     ROBLOX_BUILTIN_TYPES.forEach(type => {
-        const classData = processedDumpTyped.Classes[type];
+        // HATA DÜZELTME: Tip ataması yap
+        const classData: ClassData | undefined = processedDumpTyped.Classes[type];
         suggestions.push({
             label: type,
             kind: monaco.languages.CompletionItemKind.Class,
@@ -529,7 +529,6 @@ function getGlobalRobloxCompletions(range: monaco.Range): monaco.languages.Compl
 
     return suggestions;
 }
-
 // Instance.new completion - geliştirilmiş
 function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
     const lineContent = model.getLineContent(position.lineNumber);
@@ -539,7 +538,7 @@ function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: mo
     if (!instanceNewMatch) return [];
 
     const processedDumpTyped = processedDump as unknown as ProcessedDump;
-    const classValues = Object.values(processedDumpTyped.Classes);
+    const classValues: ClassData[] = Object.values(processedDumpTyped.Classes);
     const filteredClasses = classValues.filter(cls => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'));
     
     return filteredClasses
@@ -556,7 +555,6 @@ function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: mo
             range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
         }));
 }
-
 // GetService completion - geliştirilmiş
 function getGetServiceCompletions(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
     const lineContent = model.getLineContent(position.lineNumber);
