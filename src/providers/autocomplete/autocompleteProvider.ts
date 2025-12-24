@@ -1,4 +1,3 @@
-// src/providers/autocomplete/autocompleteProvider.ts
 import * as monaco from "monaco-editor";
 import { getModuleCompletions } from "./metadata";
 import { processedDump } from "./dump";
@@ -23,13 +22,12 @@ function parseHierarchy(model: monaco.editor.ITextModel, position: monaco.Positi
 
 // Bir class'ın member'larını getir
 function getClassMembers(className: string, range: monaco.Range): monaco.languages.CompletionItem[] {
-    // Tip güvenliği için 'any' kullanımı (API dump yapısı tam bilinmediğinden)
-    const classData = (processedDump.Classes as any)[className];
+    // Tip güvenliği için 'any' kullanımı
+    const classData: any = (processedDump.Classes as any)[className];
     if (!classData) return [];
 
     const suggestions: monaco.languages.CompletionItem[] = [];
 
-    // classData.Members üzerinde döngü
     for (const member of (classData.Members as any[])) {
         // Security check
         if (member.Security && typeof member.Security === 'object' && member.Security.Read === 'None') continue;
@@ -92,21 +90,23 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
     } else if (hierarchy[0] === 'script') {
         currentClass = 'Script';
     } else {
-        // Local variable veya bilinmeyen - type inference gerekir (gelecekte)
+        // Local variable veya bilinmeyen
         return [];
     }
 
     // Hierarchy'yi takip et
     for (let i = 1; i < hierarchy.length - 1; i++) {
-        // Hata önleyici kontrol
         if (!currentClass) return [];
 
         const memberName = hierarchy[i];
-        const classData = (processedDump.Classes as any)[currentClass];
+        
+        // HATA DUZELTME: 'classData' değişkenine açıkça 'any' tipi verildi.
+        const classData: any = (processedDump.Classes as any)[currentClass];
         if (!classData) return [];
 
         // Bu member'ın tipini bul
-        const member = classData.Members.find((m: any) => m.Name === memberName);
+        // HATA DUZELTME: 'member' değişkenine açıkça 'any' tipi verildi.
+        const member: any = classData.Members.find((m: any) => m.Name === memberName);
         if (!member) return [];
 
         if (member.MemberType === 'Property' && member.ValueType?.Name) {
@@ -118,8 +118,6 @@ function getHierarchyCompletions(hierarchy: string[], range: monaco.Range): mona
         }
     }
 
-    // Son class'ın member'larını döndür
-    // Eğer currentClass undefined ise hata vermemesi için kontrol
     if (!currentClass) return [];
 
     return getClassMembers(currentClass, range);
@@ -167,7 +165,7 @@ function getLocalCompletions(model: monaco.editor.ITextModel, position: monaco.P
         distinctVars.add(match[1]);
     }
 
-    // Function parametreleri - GELİŞTİRİLDİ
+    // Function parametreleri
     const paramPattern = /function[^(]*\(([^)]+)\)/g;
     while ((match = paramPattern.exec(text)) !== null) {
         const params = match[1].split(',');
@@ -346,7 +344,6 @@ export const autoCompleteProvider: monaco.languages.CompletionItemProvider = {
             }
         );
 
-        // Dedupe - aynı label'a sahip item'ları birleştir
         const uniqueSuggestions = suggestions.reduce((acc, item) => {
             if (!acc.find(x => x.label === item.label)) {
                 acc.push(item);
