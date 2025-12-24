@@ -1,32 +1,24 @@
-// import { formatter, rangeFormatter } from "./format/handleFormat";
-import { autoCompleteProvider } from "./autocomplete/autocompleteProvider";
-import { hoverProvider, signatureHelpProvider } from "./hover/hoverProvider";
+// src/providers/hover/hoverProvider.ts
 import * as monaco from "monaco-editor";
 
-export function initFormatter() {
-	// Formatter'ı etkinleştirmek için uncomment et
-	// monaco.languages.registerDocumentFormattingEditProvider("luau", formatter);
-	// monaco.languages.registerDocumentRangeFormattingEditProvider(
-	// 	"luau",
-	// 	rangeFormatter
-	// );
-}
+// Basit bir Hover Provider tanımlaması
+export const hoverProvider: monaco.languages.HoverProvider = {
+    provideHover: (model, position) => {
+        // Buraya hover mantığınızı ekleyebilirsiniz. Şimdilik boş dönüyoruz.
+        return null;
+    }
+};
 
-export function initAutocomplete() {
-	monaco.languages.registerCompletionItemProvider("luau", autoCompleteProvider);
-}
-
-export function initHover() {
-	monaco.languages.registerHoverProvider("luau", hoverProvider);
-}
-
-export function initSignatureHelp() {
-	monaco.languages.registerSignatureHelpProvider("luau", signatureHelpProvider);
-}
-
-export default function initProviders() {
-	initAutocomplete();
-	initHover();
-	initSignatureHelp();
-	// initFormatter(); // İstersenaçabilirsiniz
-}
+// Basit bir Signature Help Provider tanımlaması
+export const signatureHelpProvider: monaco.languages.SignatureHelpProvider = {
+    provideSignatureHelp: (model, position, token, context) => {
+        return {
+            value: {
+                activeSignature: 0,
+                activeParameter: 0,
+                signatures: []
+            },
+            dispose: () => {}
+        };
+    }
+};
