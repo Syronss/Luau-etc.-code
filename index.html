@@ -1,80 +1,35 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg" />
-		<link rel="stylesheet" href="style.css" />
-		<link rel="manifest" href="/manifest.webmanifest" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>MonaLuau Editor</title>
-	</head>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/public/assets/icons/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MonaLuau Editor</title>
+  </head>
+  <body>
+    <div class="editor-header">
+      <div class="brand">
+        <span>MonaLuau</span>
+      </div>
+      
+      <div class="toolbar">
+        <div class="select-container">
+          <select id="language-selector">
+            <option value="luau" selected>Luau</option>
+            <option value="lua">Lua</option>
+            <option value="json">JSON</option>
+            <option value="markdown">Markdown</option>
+            <option value="typescript">TypeScript</option>
+          </select>
+        </div>
+        
+        </div>
+    </div>
 
-	<body>
-		<header class="editor-header">
-			<div class="brand">
-				<img src="assets/icons/icon.svg" alt="Logo" class="logo" />
-				<span>MonaLuau</span>
-			</div>
-			
-			<div class="toolbar">
-				<div class="select-container">
-					<label for="theme-selector">Theme:</label>
-					<select id="theme-selector" name="Theme selector" title="Theme selector">
-						<optgroup label="Other Actions">
-							<option value="find-in-files">Find theme in files</option>
-						</optgroup>
-						<optgroup
-							label="Default themes:"
-							class="theme-option-group"
-							id="themes-default-group"
-						>
-							<option
-								value="krnlDark"
-								data-defined="true"
-								data-file-path=""
-								selected
-								id="default-theme-option"
-							>
-								Krnl (Dark, Default)
-							</option>
-							<option value="krnlLight" data-defined="true" data-file-path="">
-								Krnl (Light)
-							</option>
-							<option
-								value="net-theme-dark"
-								data-defined="true"
-								data-file-path=""
-							>
-								.NET (Dark)
-							</option>
-							<option
-								value="net-theme-light"
-								data-defined="true"
-								data-file-path=""
-							>
-								.NET (Light)
-							</option>
-						</optgroup>
-						<optgroup
-							label="Bundled themes:"
-							class="theme-option-group"
-							id="themes-bundled-group"
-						></optgroup>
-						<optgroup
-							label="Imported themes:"
-							id="themes-imported-group"
-							class="theme-option-group"
-						></optgroup>
-					</select>
-				</div>
-			</div>
-		</header>
+    <div id="editor-container">
+      <div id="monaco"></div>
+    </div>
 
-		<main id="editor-container">
-			<div id="monaco"></div>
-		</main>
-
-		<script type="module" src="/src/theme/themeSetup.ts"></script>
-		<script type="module" src="/src/main.ts"></script>
-	</body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
