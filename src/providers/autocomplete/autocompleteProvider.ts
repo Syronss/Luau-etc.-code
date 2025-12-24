@@ -52,7 +52,13 @@ export const ROBLOX_BUILTIN_TYPES: string[] = [
 ];
 
 // Roblox global değişkenleri
-export const ROBLOX_GLOBALS: Array<{name: string, type: string, description: string}> = [
+interface RobloxGlobal {
+    name: string;
+    type: string;
+    description: string;
+}
+
+export const ROBLOX_GLOBALS: RobloxGlobal[] = [
     { name: "game", type: "DataModel", description: "Root of the Roblox game hierarchy" },
     { name: "workspace", type: "Workspace", description: "The 3D world containing all physical objects" },
     { name: "script", type: "LuaSourceContainer", description: "The current script instance" },
@@ -86,7 +92,13 @@ export const LUA_2_KEYWORDS = [
 ];
 
 // Snippet kütüphanesi
-export const LUA_SNIPPETS: Array<{label: string, insertText: string, documentation: string}> = [
+interface Snippet {
+    label: string;
+    insertText: string;
+    documentation: string;
+}
+
+export const LUA_SNIPPETS: Snippet[] = [
     {
         label: "for i loop",
         insertText: "for ${1:i} = ${2:1}, ${3:10} do\n\t${4:-- code}\nend",
@@ -120,7 +132,7 @@ export const LUA_SNIPPETS: Array<{label: string, insertText: string, documentati
 ];
 
 // Roblox özel snippet'leri
-export const ROBLOX_SNIPPETS: Array<{label: string, insertText: string, documentation: string}> = [
+export const ROBLOX_SNIPPETS: Snippet[] = [
     {
         label: "GetService",
         insertText: 'local ${1:service} = game:GetService("${2:ServiceName}")',
@@ -328,7 +340,7 @@ function getHierarchyCompletions(hierarchy: string[], chainType: string, range: 
         if (!classData) return [];
 
         // Member'ı bul
-        const member = classData.Members.find(m => 
+        const member = classData.Members.find((m: Member) => 
             m.Name === memberName || 
             m.Name.toLowerCase() === memberName.toLowerCase()
         );
@@ -366,7 +378,7 @@ function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Po
     const enumData = processedDumpTyped.Enums[enumName];
     if (!enumData) return [];
 
-    return enumData.Items.map(item => ({
+    return enumData.Items.map((item: EnumItem) => ({
         label: item.Name,
         kind: monaco.languages.CompletionItemKind.EnumMember,
         insertText: item.Name,
@@ -379,11 +391,14 @@ function getEnumCompletions(model: monaco.editor.ITextModel, position: monaco.Po
     }));
 }
 
-// Geliştirilmiş local variable detection
-function getLocalCompletions(model: monaco.editor.ITextModel, position: monaco.Position): {
+// Local variable için tip
+interface LocalVariableInfo {
     suggestions: monaco.languages.CompletionItem[];
     typeMap: Map<string, string>;
-} {
+}
+
+// Geliştirilmiş local variable detection
+function getLocalCompletions(model: monaco.editor.ITextModel, position: monaco.Position): LocalVariableInfo {
     const text = model.getValue();
     const suggestions: monaco.languages.CompletionItem[] = [];
     const typeMap = new Map<string, string>();
@@ -524,8 +539,10 @@ function getInstanceNewCompletions(model: monaco.editor.ITextModel, position: mo
     if (!instanceNewMatch) return [];
 
     const processedDumpTyped = processedDump as unknown as ProcessedDump;
-    return Object.values(processedDumpTyped.Classes)
-        .filter(cls => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'))
+    const classValues = Object.values(processedDumpTyped.Classes);
+    const filteredClasses = classValues.filter(cls => !cls.Tags?.includes('NotCreatable') && !cls.Tags?.includes('Service'));
+    
+    return filteredClasses
         .sort((a, b) => a.Name.localeCompare(b.Name))
         .map(cls => ({
             label: cls.Name,
@@ -609,17 +626,24 @@ function getTypeCompletions(model: monaco.editor.ITextModel, position: monaco.Po
     }));
 }
 
+// Label string alma yardımcı fonksiyonu
+function getLabelString(label: string | monaco.languages.CompletionItemLabel): string {
+    if (typeof label === 'string') {
+        return label;
+    }
+    return label.label;
+}
+
 // Geliştirilmiş ana provider
 export const autoCompleteProvider: monaco.languages.CompletionItemProvider = {
     triggerCharacters: [".", ":", '"', "'", "(", "[", "{", " ", "\t", ","],
     
-    provideCompletionItems(model, position, context, _token) {
+    provideCompletionItems(model, position, _context, _token) {
         const word = model.getWordUntilPosition(position);
         const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
 
         const lineContent = model.getLineContent(position.lineNumber);
         const textBefore = lineContent.substring(0, position.column - 1);
-        const textAfter = lineContent.substring(position.column - 1);
         
         // String içinde mi kontrolü
         const isInsideString = ((textBefore.match(/"/g) || []).length % 2 !== 0) || 
@@ -739,12 +763,12 @@ export const autoCompleteProvider: monaco.languages.CompletionItemProvider = {
         // Benzersiz öneriler (alfabetik sıralı)
         const uniqueSuggestions = suggestions
             .reduce((acc, item) => {
-                if (!acc.find(x => x.label === item.label)) {
+                if (!acc.find(x => getLabelString(x.label) === getLabelString(item.label))) {
                     acc.push(item);
                 }
                 return acc;
             }, [] as monaco.languages.CompletionItem[])
-            .sort((a, b) => a.label.localeCompare(b.label));
+            .sort((a, b) => getLabelString(a.label).localeCompare(getLabelString(b.label)));
 
         return { 
             suggestions: uniqueSuggestions,
@@ -763,7 +787,7 @@ export const autoCompleteProvider: monaco.languages.CompletionItemProvider = {
         }
         
         // Preselect önemli öğeler
-        if (['game', 'workspace', 'script', 'Vector3', 'CFrame'].includes(item.label as string)) {
+        if (['game', 'workspace', 'script', 'Vector3', 'CFrame'].includes(getLabelString(item.label))) {
             item.preselect = true;
         }
         
