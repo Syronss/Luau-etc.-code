@@ -1,9 +1,10 @@
 /**
  * UI Components - Modern, yeniden kullanılabilir UI bileşenleri
  */
-
+import * as monaco from 'monaco-editor'; // Add this import
 import EditorStore, { FileData, ProjectData } from "../store/EditorStore";
 
+export class FileTree {
 export class FileTree {
     private container: HTMLElement;
     private files: FileData[] = [];
